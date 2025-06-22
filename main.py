@@ -1,9 +1,35 @@
 import streamlit as st
 import requests
 import pandas as pd
+import base64
+import json
+import time
 
 API_URL = "https://api.gomining.com/api/nft-game/round/get-state"
 
+# Funktion zum JWT-Token Ablauf prüfen
+def decode_jwt_exp(token):
+    try:
+        payload_encoded = token.split('.')[1]
+        padding = '=' * (-len(payload_encoded) % 4)
+        decoded = base64.urlsafe_b64decode(payload_encoded + padding)
+        payload = json.loads(decoded)
+        return payload.get("exp", 0)
+    except Exception:
+        return 0
+
+def check_token(token):
+    exp = decode_jwt_exp(token)
+    now = int(time.time())
+    remaining = exp - now
+    if remaining <= 0:
+        st.error("⚠ Dein Access Token ist abgelaufen. Bitte hole einen neuen Token aus der Web-App und aktualisiere dein Secret.")
+    else:
+        min_left = remaining // 60
+        sec_left = remaining % 60
+        st.info(f"✅ Dein Access Token ist noch {min_left} min {sec_left} sek gültig.")
+
+# Funktion zum Abrufen des API-States
 def fetch_round_state():
     headers = {
         "Authorization": f"Bearer {st.secrets['ACCESS_TOKEN']}",
@@ -35,8 +61,13 @@ def fetch_round_state():
         st.json(response.text)
         return None
 
+# Streamlit App Aufbau
 st.title("⛏️ BTC Mining Wars Wahrscheinlichkeiten & Statistik")
 
+# Check Access Token Gültigkeit
+check_token(st.secrets["ACCESS_TOKEN"])
+
+# API Call
 data = fetch_round_state()
 
 if data and "data" in data:
