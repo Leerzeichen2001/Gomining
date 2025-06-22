@@ -100,7 +100,7 @@ if data and "data" in data:
     st.pyplot(plt.gcf())
     plt.clf()
 
-    # Booster Bedarf Diagramme pro Top 3 Platz
+    # Booster Bedarf Diagramme mit logarithmischer Skala
     for i, row in top_scores.iterrows():
         target = row["Score"]
         diff = max(0, target - me["score"])
@@ -120,7 +120,8 @@ if data and "data" in data:
 
         fig2, ax2 = plt.subplots(figsize=(6, 4))
         bars = ax2.bar(booster_names, booster_values, color=["blue", "green", "purple"])
-        ax2.set_ylabel("Benötigte Menge")
+        ax2.set_ylabel("Benötigte Menge (log-Skala)")
+        ax2.set_yscale('log')
         ax2.set_title(f"Booster-Bedarf für {row['Clan']}")
 
         # Zahlen auf Balken
