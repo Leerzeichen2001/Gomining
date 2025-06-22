@@ -126,3 +126,36 @@ if data and "data" in data:
 
 else:
     st.warning("Keine gültigen Daten empfangen. Bitte prüfe Access Token oder API.")
+
+# Booster Bedarf Diagramme
+for i, row in top_scores.iterrows():
+    target = row["Score"]
+    diff = max(0, target - me["score"])
+    st.markdown(f"### {row['Clan']} Ziel: {target:.2f} Punkte (Diff: {diff:.2f})")
+
+    if diff == 0:
+        st.success("✅ Du bist bereits auf oder vor diesem Platz!")
+        continue
+
+    # Booster-Berechnungen
+    echo_cycles = calc_echo_cycles(diff)
+    blitz_count = math.ceil(diff / 400000)
+    rakete_sec = math.ceil(diff / 1800)
+
+    # Ergebnis als Balkendiagramm
+    booster_names = ["🔄 Echo Zyklen", "🚀 Blitz Booster", "⚡ Rakete Sekunden"]
+    booster_values = [echo_cycles or 0, blitz_count, rakete_sec]
+
+    fig2, ax2 = plt.subplots(figsize=(6, 4))
+    bars = ax2.bar(booster_names, booster_values, color=["blue", "green", "purple"])
+    ax2.set_ylabel("Benötigte Menge")
+    ax2.set_title(f"Booster-Bedarf für {row['Clan']}")
+
+    # Optional: Werte auf Balken schreiben
+    for bar in bars:
+        height = bar.get_height()
+        ax2.text(bar.get_x() + bar.get_width() / 2, height, f'{int(height)}', ha='center', va='bottom')
+
+    st.pyplot(fig2)
+    plt.clf()
+
