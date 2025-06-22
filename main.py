@@ -5,6 +5,7 @@ import base64
 import json
 import time
 import math
+import matplotlib.pyplot as plt
 
 API_URL = "https://api.gomining.com/api/nft-game/round/get-state"
 
@@ -62,13 +63,7 @@ def calc_echo_cycles(diff):
     n = (-b + math.sqrt(discriminant)) / (2 * a)
     return math.ceil(n)
 
-BOOSTERS = [
-    {"name": "🔄 Echo Boost X1", "type": "echo", "interval": 120},
-    {"name": "🚀 Blitz", "value": 400000, "type": "instant"},
-    {"name": "⚡ Rakete", "value": 1800, "type": "rakete"}
-]
-
-st.title("⛏️ BTC Mining Wars Booster-Rechner")
+st.title("⛏️ BTC Mining Wars Booster-Rechner (mit Graphen)")
 
 # Checkbox für Auto-Refresh
 auto_refresh = st.checkbox("🔄 Automatisch alle 1 Sekunde aktualisieren", value=True)
@@ -81,47 +76,49 @@ if data and "data" in data:
     me = data["data"]["me"]
     df = pd.DataFrame([{"Clan": c["clanName"], "Score": c["score"]} for c in clans])
     df_sorted = df.sort_values(by="Score", ascending=False)
-    top_scores = df_sorted["Score"].values[:3]
-    ranks = ["🥇 Platz 1", "🥈 Platz 2", "🥉 Platz 3"]
+    top_scores = df_sorted.head(3)
+    
+    # Diagramm: Dein Score vs Top 3
+    plt.figure(figsize=(8, 5))
+    bars = plt.bar(
+        [f"{row['Clan']} (Top {i+1})" for i, row in top_scores.iterrows()] + ["Du"],
+        list(top_scores["Score"]) + [me["score"]],
+        color=["green", "orange", "blue", "red"]
+    )
+    plt.ylabel("Punkte")
+    plt.title("Dein Score vs. Top 3 Clans")
+    plt.xticks(rotation=45, ha="right")
+    st.pyplot(plt.gcf())
+    plt.clf()
 
-    for idx, target in enumerate(top_scores):
+    # Booster-Bedarf als Diagramm pro Ziel
+    for idx, row in top_scores.iterrows():
+        target = row["Score"]
         diff = max(0, target - me["score"])
+        st.markdown(f"### {row['Clan']} Ziel: {target:.2f} Punkte (Diff: {diff:.2f})")
+
         if diff == 0:
-            st.success(f"Du bist bereits vor {ranks[idx]}!")
+            st.success("✅ Du bist bereits auf oder vor diesem Platz!")
             continue
 
-        st.markdown(f"### {ranks[idx]} Ziel-Score: {target:.2f}")
-        st.markdown(f"Benötigte Punkte: **{diff:.2f}**")
+        echo_cycles = calc_echo_cycles(diff)
+        blitz_count = math.ceil(diff / 400000)
+        rakete_sec = math.ceil(diff / 1800)
 
-        cols = st.columns(3)
+        booster_names = ["🔄 Echo Zyklen", "🚀 Blitz (x)", "⚡ Rakete (Sekunden)"]
+        booster_values = [echo_cycles or 0, blitz_count, rakete_sec]
 
-        with cols[0]:
-            st.markdown("**🔄 Echo Boost X1**")
-            n_cycles = calc_echo_cycles(diff)
-            if n_cycles:
-                total_time = n_cycles * 120
-                min_needed = total_time // 60
-                sec_needed = total_time % 60
-                st.write(f"Zyklen: {n_cycles}")
-                st.write(f"Dauer: {min_needed} min {sec_needed} sek")
-            else:
-                st.write("Nicht erreichbar")
+        fig2, ax2 = plt.subplots(figsize=(6,4))
+        ax2.bar(booster_names, booster_values, color=["blue", "green", "purple"])
+        ax2.set_ylabel("Benötigte Menge")
+        ax2.set_title("Booster-Bedarf für Ziel")
+        st.pyplot(fig2)
+        plt.clf()
 
-        with cols[1]:
-            st.markdown("**🚀 Blitz**")
-            blitz_count = math.ceil(diff / 400000)
-            st.write(f"Benötigt: {blitz_count}x")
-
-        with cols[2]:
-            st.markdown("**⚡ Rakete**")
-            sec_needed = math.ceil(diff / 1800)
-            min_needed = sec_needed // 60
-            sec_remaining = sec_needed % 60
-            st.write(f"Laufzeit: {min_needed} min {sec_remaining} sek")
 else:
     st.warning("Keine gültigen Daten empfangen. Bitte prüfe Access Token oder API.")
 
-# Auto-Refresh bei aktivierter Checkbox
+# Auto-Refresh
 if auto_refresh:
     time.sleep(1)
     st.experimental_rerun()
