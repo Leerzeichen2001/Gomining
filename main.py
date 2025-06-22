@@ -61,13 +61,13 @@ def fetch_round_state():
         return None
 
 BOOSTERS = [
-    {"name": "⚡ Boost X1", "value": 1800, "type": "instant", "color": "#e8f5e9"},
-    {"name": "⚡ Boost X10", "value": 18000, "type": "instant", "color": "#e8f5e9"},
-    {"name": "⚡ Boost X100", "value": 180000, "type": "instant", "color": "#e8f5e9"},
-    {"name": "🚀 Instant Boost", "value": 400000, "type": "instant", "color": "#e8f5e9"},
-    {"name": "🔄 Echo Boost X1", "value": 100000, "type": "echo", "interval": 120, "color": "#e3f2fd"},
-    {"name": "🔄 Echo Boost X10", "value": 1000000, "type": "echo", "interval": 120, "color": "#e3f2fd"},
-    {"name": "🔄 Echo Boost X100", "value": 10000000, "type": "echo", "interval": 120, "color": "#e3f2fd"}
+    {"name": "⚡ Boost X1", "value": 1800, "type": "instant"},
+    {"name": "⚡ Boost X10", "value": 18000, "type": "instant"},
+    {"name": "⚡ Boost X100", "value": 180000, "type": "instant"},
+    {"name": "🚀 Instant Boost", "value": 400000, "type": "instant"},
+    {"name": "🔄 Echo Boost X1", "value": 100000, "type": "echo", "interval": 120},
+    {"name": "🔄 Echo Boost X10", "value": 1000000, "type": "echo", "interval": 120},
+    {"name": "🔄 Echo Boost X100", "value": 10000000, "type": "echo", "interval": 120}
 ]
 
 # App Start
@@ -111,19 +111,22 @@ if data and "data" in data:
             for col, booster in zip(cols, row):
                 with col:
                     count = math.ceil(diff / booster["value"])
+                    bg_color = "#f0f0f0"  # neutrales hellgrau für gute Lesbarkeit
+                    text_color = "#333333"  # dunkle Schrift
                     box = f"""
-                    <div style='background-color:{booster["color"]}; padding:12px; border-radius:10px; text-align:center;'>
-                        <b>{booster["name"]}</b><br>
+                    <div style='background-color:{bg_color}; padding:12px; border-radius:10px;
+                    border:1px solid #ccc; box-shadow:2px 2px 5px rgba(0,0,0,0.1); text-align:center;'>
+                        <div style='color:{text_color}; font-weight:bold;'>{booster["name"]}</div>
                     """
                     if booster["type"] == "instant":
-                        box += f"Benötigt: <span style='color:green'><b>{count}x</b></span>"
+                        box += f"<div style='color:green; font-size:18px;'>Benötigt: {count}x</div>"
                     else:
                         time_needed = count * booster["interval"]
                         min_needed = time_needed // 60
                         sec_needed = time_needed % 60
                         box += f"""
-                        Benötigt: <span style='color:blue'><b>{count}x</b></span><br>
-                        Dauer: <span style='color:blue'><b>{min_needed} min {sec_needed} sek</b></span>
+                        <div style='color:blue; font-size:16px;'>Benötigt: {count}x</div>
+                        <div style='color:blue; font-size:14px;'>Dauer: {min_needed} min {sec_needed} sek</div>
                         """
                     box += "</div>"
                     st.markdown(box, unsafe_allow_html=True)
