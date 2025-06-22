@@ -63,9 +63,19 @@ def calc_echo_cycles(diff):
     n = (-b + math.sqrt(discriminant)) / (2 * a)
     return math.ceil(n)
 
-st.title("⛏️ BTC Mining Wars Booster-Rechner (mit Graphen)")
+# --- Start Auto-Refresh ---
+if "last_refresh" not in st.session_state:
+    st.session_state["last_refresh"] = time.time()
 
 auto_refresh = st.checkbox("🔄 Automatisch alle 1 Sekunde aktualisieren", value=True)
+
+if auto_refresh:
+    if time.time() - st.session_state["last_refresh"] >= 1:
+        st.session_state["last_refresh"] = time.time()
+        st.experimental_rerun()
+
+# --- Haupt-App ---
+st.title("⛏️ BTC Mining Wars Booster-Rechner (mit Graphen)")
 
 check_token(st.secrets["ACCESS_TOKEN"])
 data = fetch_round_state()
@@ -116,8 +126,3 @@ if data and "data" in data:
 
 else:
     st.warning("Keine gültigen Daten empfangen. Bitte prüfe Access Token oder API.")
-
-# Auto-Refresh ganz am Ende, außerhalb der Schleifen und Plots
-if auto_refresh:
-    time.sleep(1)
-    st.experimental_rerun()
