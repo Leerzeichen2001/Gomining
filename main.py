@@ -64,6 +64,18 @@ def calc_echo_cycles(diff):
     n = (-b + math.sqrt(discriminant)) / (2 * a)
     return math.ceil(n)
 
+def display_round_emojis(runden):
+    lines = []
+    for dur in runden[::-1]:
+        if dur < 9:
+            emoji = "🟢"
+        elif dur > 12:
+            emoji = "🔴"
+        else:
+            emoji = "🟡"
+        lines.append(f"{emoji} {dur:.2f} min")
+    st.markdown("**Rundenlänge Verlauf:**  \n" + "  \n".join(lines))
+
 # --- Auto-Refresh ---
 if "last_refresh" not in st.session_state:
     st.session_state["last_refresh"] = time.time()
@@ -75,8 +87,8 @@ if auto_refresh:
         st.session_state["last_refresh"] = time.time()
         st.experimental_rerun()
 
-# --- App-Header ---
-st.title("⛏️ BTC Mining Wars Booster-Rechner + Rundenlängen-Phase (Plotly)")
+# --- App ---
+st.title("⛏️ BTC Mining Wars Booster-Rechner + Emoji-Rundenanalyse")
 
 check_token(st.secrets["ACCESS_TOKEN"])
 data = fetch_round_state()
@@ -100,7 +112,7 @@ if data and "data" in data:
     )
     st.plotly_chart(fig, use_container_width=True)
 
-    # Booster Bedarf Diagramme
+    # Booster Bedarf
     for idx, row in top_scores.iterrows():
         target = row["Score"]
         diff = max(0, target - me["score"])
@@ -132,13 +144,12 @@ if data and "data" in data:
         )
         st.plotly_chart(fig_boost, use_container_width=True)
 
-    # Rundenlängen-Analyse
+    # Rundenlängen-Verlauf (Emoji)
     if "runden" not in st.session_state:
         st.session_state["runden"] = []
 
-    # Beispiel: Simuliere neue Runde (hier später echte Dauer einfügen!)
+    # Simuliere neue Runde (hier später echte Daten einfügen)
     if len(st.session_state["runden"]) == 0 or datetime.now().second % 30 == 0:
-        # Simuliere zufällige Dauer zwischen 8 und 14 min
         duration = round(8 + (6 * (time.time() % 1)), 2)
         st.session_state["runden"].append(duration)
         if len(st.session_state["runden"]) > 20:
@@ -154,22 +165,7 @@ if data and "data" in data:
             phase = "Standard-Phase"
 
         st.info(f"Aktuelle Phase: {phase} (Ø Rundenlänge: {avg:.2f} min)")
-
-        # Plot Verlauf
-        fig_rounds = go.Figure()
-        fig_rounds.add_trace(go.Scatter(
-            x=list(range(1, len(st.session_state["runden"]) + 1)),
-            y=st.session_state["runden"],
-            mode='lines+markers',
-            name="Rundenlänge"
-        ))
-        fig_rounds.update_layout(
-            title="Rundenlängen Verlauf (letzte 20 Runden)",
-            xaxis_title="Runde (von alt nach neu)",
-            yaxis_title="Dauer (Minuten)"
-        )
-        st.plotly_chart(fig_rounds, use_container_width=True)
-
+        display_round_emojis(st.session_state["runden"])
         st.write(f"Schätzung nächste Rundenlänge: ~{avg:.2f} min basierend auf aktueller Phase")
 
 else:
