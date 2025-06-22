@@ -11,26 +11,28 @@ def fetch_round_state():
         "Origin": "https://app.gomining.com",
         "Referer": "https://app.gomining.com/",
         "x-device-type": "desktop",
-        "Accept": "application/json"
+        "Accept": "application/json",
+        "Content-Type": "application/json"
     }
 
-    # Erst POST ohne Body probieren
-    st.info("Sende POST-Request an API...")
-    response = requests.post(API_URL, headers=headers)
-    if response.status_code == 200:
-        st.success("POST erfolgreich.")
-        return response.json()
-    else:
-        st.warning(f"POST-Request fehlgeschlagen mit Status: {response.status_code}. Versuche GET...")
+    body = {
+        "type": "clans",
+        "pagination": {
+            "limit": 10,
+            "skip": 0,
+            "count": 0
+        },
+        "leagueId": 5
+    }
 
-    # Wenn POST fehlschlägt, GET probieren
-    response = requests.get(API_URL, headers=headers)
+    response = requests.post(API_URL, headers=headers, json=body)
+
     if response.status_code == 200:
-        st.success("GET erfolgreich.")
+        st.success("Daten erfolgreich abgerufen!")
         return response.json()
     else:
-        st.error(f"GET-Request ebenfalls fehlgeschlagen mit Status: {response.status_code}.")
-        st.json(response.text)  # Zeige die Fehlermeldung der API (hilfreich für Debugging)
+        st.error(f"API Fehler: {response.status_code}")
+        st.json(response.text)
         return None
 
 st.title("⛏️ BTC Mining Wars Wahrscheinlichkeiten & Statistik")
