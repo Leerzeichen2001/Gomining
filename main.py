@@ -1,66 +1,59 @@
-import requests
 import streamlit as st
+import requests
 import pandas as pd
-from datetime import datetime
 
 API_URL = "https://api.gomining.com/api/nft-game/round/get-last"
 
-def fetch_current_rounds():
+def fetch_current_round():
     try:
-        response = requests.get(API_URL)
+        headers = {
+            "User-Agent": (
+                "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+                "AppleWebKit/537.36 (KHTML, like Gecko) "
+                "Chrome/120.0.0.0 Safari/537.36"
+            )
+        }
+        response = requests.get(API_URL, headers=headers)
         response.raise_for_status()
-        data = response.json()
-        return data.get("data", {}).get("array", [])
-    except Exception as e:
-        st.error(f"Fehler beim Abrufen der Runden-Daten: {e}")
-        return []
+        return response.json().get("data")
+    except requests.HTTPError as http_err:
+        st.error(f"HTTP-Fehler beim Abrufen der Runden-Daten: {http_err}")
+    except Exception as err:
+        st.error(f"Anderer Fehler beim Abrufen der Runden-Daten: {err}")
+    return None
 
-def calculate_round_durations(rounds_data, last_n=20):
-    records = []
-    for round_info in rounds_data[-last_n:]:
-        started_at = round_info.get("startedAt")
-        ended_at = round_info.get("endedAt")
-        if started_at and ended_at:
-            try:
-                start_dt = datetime.fromisoformat(started_at.replace("Z", "+00:00"))
-                end_dt = datetime.fromisoformat(ended_at.replace("Z", "+00:00"))
-                duration_sec = (end_dt - start_dt).total_seconds()
-                records.append({
-                    "Round ID": round_info.get("id"),
-                    "Start": start_dt,
-                    "End": end_dt,
-                    "Duration (sec)": duration_sec
-                })
-            except Exception as e:
-                st.warning(f"Fehler bei Runde {round_info.get('id')}: {e}")
-                continue
-    return pd.DataFrame(records)
+def display_dashboard(round_data):
+    if not round_data:
+        st.warning("Keine Runden-Daten verfügbar.")
+        return
+
+    st.title("GoMining Runden Dashboard")
+
+    # Grundlegende Infos
+    st.subheader("Allgemeine Informationen")
+    st.write(f"Runden-ID: {round_data.get('id')}")
+    st.write(f"Block Number: {round_data.get('blockNumber')}")
+    st.write(f"Aktiv: {round_data.get('active')}")
+    st.write(f"Gestartet: {round_data.get('startedAt')}")
+    st.write(f"Beendet: {round_data.get('endedAt')}")
+
+    # UserRounds als Tabelle
+    user_rounds = round_data.get("userRounds", [])
+    if user_rounds:
+        df = pd.DataFrame(user_rounds)
+        st.subheader("User Runden Übersicht")
+        st.dataframe(df)
+    else:
+        st.info("Keine User-Runden-Daten vorhanden.")
 
 def main():
-    st.title("⛏️ GoMining Rundenlängen Dashboard")
-    st.write("Live Analyse der letzten Runden")
-
-    with st.spinner("Hole aktuelle Runden..."):
-        rounds = fetch_current_rounds()
-
-    if not rounds:
-        st.error("Keine Daten empfangen. Bitte versuche es später erneut.")
-        return
-
-    df = calculate_round_durations(rounds)
-
-    if df.empty:
-        st.warning("Nicht genügend abgeschlossene Runden gefunden.")
-        return
-
-    st.subheader("Letzte 20 Rundenlängen")
-    st.dataframe(df.style.format({"Duration (sec)": "{:.2f}"}))
-
-    avg_duration = df["Duration (sec)"].mean()
-    st.metric("⏱️ Durchschnittliche Rundenlänge (Sekunden)", f"{avg_duration:.2f}")
-
-    st.subheader("Rundenlänge Verlauf")
-    st.line_chart(df.set_index("Round ID")["Duration (sec)"])
+    st.set_page_config(page_title="GoMining Dashboard", layout="wide")
+    st.sidebar.title("GoMining Dashboard")
+    if st.sidebar.button("Daten aktualisieren"):
+        round_data = fetch_current_round()
+        display_dashboard(round_data)
+    else:
+        st.info("Klicke links auf 'Daten aktualisieren', um die neuesten Runden-Daten abzurufen.")
 
 if __name__ == "__main__":
     main()
