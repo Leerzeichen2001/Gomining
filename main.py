@@ -60,7 +60,7 @@ def fetch_round_state():
         st.json(response.text)
         return None
 
-# Booster-Konfiguration (angepasst an deine Datenstruktur)
+# Booster-Definitionen
 BOOSTERS = [
     {"name": "Boost X1", "value": 1800, "type": "instant"},
     {"name": "Boost X10", "value": 18000, "type": "instant"},
@@ -71,7 +71,8 @@ BOOSTERS = [
     {"name": "Echo Boost X100", "value": 10000000, "type": "echo", "interval": 120}
 ]
 
-st.title("⛏️ BTC Mining Wars Wahrscheinlichkeiten & Statistik")
+# App Start
+st.title("⛏️ BTC Mining Wars Wahrscheinlichkeiten & Booster-Rechner")
 
 check_token(st.secrets["ACCESS_TOKEN"])
 
@@ -109,27 +110,41 @@ if data and "data" in data:
     needed_score = (desired_chance / 100) * total_score
     st.write(f"Du bräuchtest ca. **{needed_score:.2f} Punkte**, um {desired_chance:.1f}% Gewinnchance zu haben (bei aktuellem Gesamtscore {total_score:.2f}).")
 
-    st.subheader("📈 Booster-Rechner für Platz 1-3")
+    st.subheader("📈 Booster-Rechner für Platz 1–3")
 
     top_scores = df_sorted["Score"].values[:3]
-    ranks = ["Platz 1", "Platz 2", "Platz 3"]
+    ranks = ["🥇 Platz 1", "🥈 Platz 2", "🥉 Platz 3"]
+    colors = ["#FFD700", "#C0C0C0", "#CD7F32"]  # Gold, Silber, Bronze
 
     for idx, target in enumerate(top_scores):
         diff = target - me["score"]
         if diff <= 0:
             st.success(f"Du bist bereits vor {ranks[idx]}!")
             continue
-        st.markdown(f"**{ranks[idx]} Ziel: {target:.2f} Punkte (Differenz: {diff:.2f})**")
+
+        st.markdown(
+            f"<div style='background-color:{colors[idx]}; padding:10px; border-radius:8px; color:black'>"
+            f"<b>{ranks[idx]} Ziel:</b> {target:.2f} Punkte<br>"
+            f"<b>Differenz:</b> {diff:.2f} Punkte"
+            f"</div>", unsafe_allow_html=True
+        )
+
         for booster in BOOSTERS:
-            if booster["type"] == "instant":
-                count = math.ceil(diff / booster["value"])
-                st.write(f"- {booster['name']}: ca. {count}x benötigt")
-            elif booster["type"] == "echo":
-                count = math.ceil(diff / booster["value"])
-                time_needed = count * booster["interval"]
-                min_needed = time_needed // 60
-                sec_needed = time_needed % 60
-                st.write(f"- {booster['name']}: ca. {count}x benötigt → Dauer: {min_needed} min {sec_needed} sek")
+            col1, col2 = st.columns([2, 3])
+            with col1:
+                st.markdown(f"**{booster['name']}**")
+            with col2:
+                if booster["type"] == "instant":
+                    count = math.ceil(diff / booster["value"])
+                    st.markdown(f"- Benötigt: **{count}x**")
+                elif booster["type"] == "echo":
+                    count = math.ceil(diff / booster["value"])
+                    time_needed = count * booster["interval"]
+                    min_needed = time_needed // 60
+                    sec_needed = time_needed % 60
+                    st.markdown(f"- Benötigt: **{count}x** → Dauer: **{min_needed} min {sec_needed} sek**")
+
+        st.markdown("---")  # Trennlinie zwischen den Plätzen
 
 else:
     st.warning("Keine gültigen Daten empfangen. Bitte prüfe Access Token oder API.")
