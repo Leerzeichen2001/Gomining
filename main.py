@@ -61,17 +61,17 @@ def fetch_round_state():
         return None
 
 BOOSTERS = [
-    {"name": "Boost X1", "value": 1800, "type": "instant"},
-    {"name": "Boost X10", "value": 18000, "type": "instant"},
-    {"name": "Boost X100", "value": 180000, "type": "instant"},
-    {"name": "Instant Boost", "value": 400000, "type": "instant"},
-    {"name": "Echo Boost X1", "value": 100000, "type": "echo", "interval": 120},
-    {"name": "Echo Boost X10", "value": 1000000, "type": "echo", "interval": 120},
-    {"name": "Echo Boost X100", "value": 10000000, "type": "echo", "interval": 120}
+    {"name": "⚡ Boost X1", "value": 1800, "type": "instant", "color": "#e8f5e9"},
+    {"name": "⚡ Boost X10", "value": 18000, "type": "instant", "color": "#e8f5e9"},
+    {"name": "⚡ Boost X100", "value": 180000, "type": "instant", "color": "#e8f5e9"},
+    {"name": "🚀 Instant Boost", "value": 400000, "type": "instant", "color": "#e8f5e9"},
+    {"name": "🔄 Echo Boost X1", "value": 100000, "type": "echo", "interval": 120, "color": "#e3f2fd"},
+    {"name": "🔄 Echo Boost X10", "value": 1000000, "type": "echo", "interval": 120, "color": "#e3f2fd"},
+    {"name": "🔄 Echo Boost X100", "value": 10000000, "type": "echo", "interval": 120, "color": "#e3f2fd"}
 ]
 
 # App Start
-st.title("⛏️ BTC Mining Wars Wahrscheinlichkeiten & Booster-Rechner")
+st.title("⛏️ BTC Mining Wars Wahrscheinlichkeiten & Booster-Strategie")
 
 check_token(st.secrets["ACCESS_TOKEN"])
 
@@ -84,47 +84,48 @@ if data and "data" in data:
     df = pd.DataFrame([{
         "Clan": c["clanName"],
         "Score": c["score"],
-        "Chance %": c["chance"] * 100,
-        "Boost": c["activeBoostScore"]
     } for c in clans])
 
     df_sorted = df.sort_values(by="Score", ascending=False)
 
-    st.subheader("📈 Booster-Vorschau (Top 3 Ziele)")
+    st.subheader("🚀 Booster-Strategie: Was brauchst du für Platz 1-3?")
 
     top_scores = df_sorted["Score"].values[:3]
-    ranks = ["🥇", "🥈", "🥉"]
+    ranks = ["🥇 Platz 1", "🥈 Platz 2", "🥉 Platz 3"]
 
     for idx, target in enumerate(top_scores):
         diff = max(0, target - me["score"])
+        if diff == 0:
+            st.success(f"Du bist bereits vor {ranks[idx]}!")
+            continue
+
         st.markdown(f"### {ranks[idx]} Ziel-Score: {target:.2f} Punkte")
 
-        booster_cols = st.columns(3)
-        for i, booster in enumerate(BOOSTERS):
-            col = booster_cols[i % 3]
-            with col:
-                st.markdown(
-                    f"""
-                    <div style='border:1px solid #ddd; padding:10px; border-radius:10px; background-color:#f9f9f9'>
-                    <b>{booster['name']}</b><br>
-                    """,
-                    unsafe_allow_html=True
-                )
-                if booster["type"] == "instant":
-                    count = math.ceil(diff / booster["value"])
-                    st.markdown(
-                        f"<span style='color:green'>Benötigt: {count}x</span></div>",
-                        unsafe_allow_html=True
-                    )
-                elif booster["type"] == "echo":
-                    count = math.ceil(diff / booster["value"])
-                    time_needed = count * booster["interval"]
-                    min_needed = time_needed // 60
-                    sec_needed = time_needed % 60
-                    st.markdown(
-                        f"<span style='color:blue'>Benötigt: {count}x<br>Dauer: {min_needed} min {sec_needed} sek</span></div>",
-                        unsafe_allow_html=True
-                    )
+        # 3 Booster-Kacheln pro Zeile
+        rows = []
+        for i in range(0, len(BOOSTERS), 3):
+            rows.append(BOOSTERS[i:i+3])
 
+        for row in rows:
+            cols = st.columns(len(row))
+            for col, booster in zip(cols, row):
+                with col:
+                    count = math.ceil(diff / booster["value"])
+                    box = f"""
+                    <div style='background-color:{booster["color"]}; padding:12px; border-radius:10px; text-align:center;'>
+                        <b>{booster["name"]}</b><br>
+                    """
+                    if booster["type"] == "instant":
+                        box += f"Benötigt: <span style='color:green'><b>{count}x</b></span>"
+                    else:
+                        time_needed = count * booster["interval"]
+                        min_needed = time_needed // 60
+                        sec_needed = time_needed % 60
+                        box += f"""
+                        Benötigt: <span style='color:blue'><b>{count}x</b></span><br>
+                        Dauer: <span style='color:blue'><b>{min_needed} min {sec_needed} sek</b></span>
+                        """
+                    box += "</div>"
+                    st.markdown(box, unsafe_allow_html=True)
 else:
     st.warning("Keine gültigen Daten empfangen. Bitte prüfe Access Token oder API.")
