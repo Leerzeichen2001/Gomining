@@ -4,10 +4,10 @@ import pandas as pd
 import base64
 import json
 import time
+import math
 
 API_URL = "https://api.gomining.com/api/nft-game/round/get-state"
 
-# Funktion zum JWT-Token Ablauf prüfen
 def decode_jwt_exp(token):
     try:
         payload_encoded = token.split('.')[1]
@@ -29,7 +29,6 @@ def check_token(token):
         sec_left = remaining % 60
         st.info(f"✅ Dein Access Token ist noch {min_left} min {sec_left} sek gültig.")
 
-# Funktion zum Abrufen des API-States
 def fetch_round_state():
     headers = {
         "Authorization": f"Bearer {st.secrets['ACCESS_TOKEN']}",
@@ -61,13 +60,21 @@ def fetch_round_state():
         st.json(response.text)
         return None
 
-# Streamlit App Aufbau
+# Booster-Konfiguration (angepasst an deine Datenstruktur)
+BOOSTERS = [
+    {"name": "Boost X1", "value": 1800, "type": "instant"},
+    {"name": "Boost X10", "value": 18000, "type": "instant"},
+    {"name": "Boost X100", "value": 180000, "type": "instant"},
+    {"name": "Instant Boost", "value": 400000, "type": "instant"},
+    {"name": "Echo Boost X1", "value": 100000, "type": "echo", "interval": 120},
+    {"name": "Echo Boost X10", "value": 1000000, "type": "echo", "interval": 120},
+    {"name": "Echo Boost X100", "value": 10000000, "type": "echo", "interval": 120}
+]
+
 st.title("⛏️ BTC Mining Wars Wahrscheinlichkeiten & Statistik")
 
-# Check Access Token Gültigkeit
 check_token(st.secrets["ACCESS_TOKEN"])
 
-# API Call
 data = fetch_round_state()
 
 if data and "data" in data:
@@ -101,5 +108,28 @@ if data and "data" in data:
     total_score = df["Score"].sum() + me["score"]
     needed_score = (desired_chance / 100) * total_score
     st.write(f"Du bräuchtest ca. **{needed_score:.2f} Punkte**, um {desired_chance:.1f}% Gewinnchance zu haben (bei aktuellem Gesamtscore {total_score:.2f}).")
+
+    st.subheader("📈 Booster-Rechner für Platz 1-3")
+
+    top_scores = df_sorted["Score"].values[:3]
+    ranks = ["Platz 1", "Platz 2", "Platz 3"]
+
+    for idx, target in enumerate(top_scores):
+        diff = target - me["score"]
+        if diff <= 0:
+            st.success(f"Du bist bereits vor {ranks[idx]}!")
+            continue
+        st.markdown(f"**{ranks[idx]} Ziel: {target:.2f} Punkte (Differenz: {diff:.2f})**")
+        for booster in BOOSTERS:
+            if booster["type"] == "instant":
+                count = math.ceil(diff / booster["value"])
+                st.write(f"- {booster['name']}: ca. {count}x benötigt")
+            elif booster["type"] == "echo":
+                count = math.ceil(diff / booster["value"])
+                time_needed = count * booster["interval"]
+                min_needed = time_needed // 60
+                sec_needed = time_needed % 60
+                st.write(f"- {booster['name']}: ca. {count}x benötigt → Dauer: {min_needed} min {sec_needed} sek")
+
 else:
     st.warning("Keine gültigen Daten empfangen. Bitte prüfe Access Token oder API.")
