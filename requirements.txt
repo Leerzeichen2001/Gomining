@@ -1,4 +1,4 @@
 streamlit
-requests
 pandas
-matplotlib
+requests
+streamlit-autorefresh
