@@ -5,7 +5,7 @@ import base64
 import json
 import time
 import math
-import matplotlib.pyplot as plt
+import plotly.graph_objects as go
 
 API_URL = "https://api.gomining.com/api/nft-game/round/get-state"
 
@@ -75,7 +75,7 @@ if auto_refresh:
         st.experimental_rerun()
 
 # --- Haupt-App ---
-st.title("⛏️ BTC Mining Wars Booster-Rechner (mit Graphen)")
+st.title("⛏️ BTC Mining Wars Booster-Rechner (Plotly interaktiv)")
 
 check_token(st.secrets["ACCESS_TOKEN"])
 data = fetch_round_state()
@@ -87,21 +87,20 @@ if data and "data" in data:
     df_sorted = df.sort_values(by="Score", ascending=False)
     top_scores = df_sorted.head(3)
 
-    # Dein Score vs. Top 3 Diagramm
-    plt.figure(figsize=(8, 5))
-    plt.bar(
-        [f"{row['Clan']} (Top {i+1})" for i, row in top_scores.iterrows()] + ["Du"],
-        list(top_scores["Score"]) + [me["score"]],
-        color=["green", "orange", "blue", "red"]
+    # Dein Score vs. Top 3 interaktiv
+    fig = go.Figure()
+    for idx, row in top_scores.iterrows():
+        fig.add_trace(go.Bar(name=f"{row['Clan']} (Top {idx+1})", x=["Score"], y=[row["Score"]]))
+    fig.add_trace(go.Bar(name="Du", x=["Score"], y=[me["score"]], marker_color="red"))
+    fig.update_layout(
+        title="Dein Score vs. Top 3",
+        yaxis_title="Punkte",
+        barmode='group'
     )
-    plt.ylabel("Punkte")
-    plt.title("Dein Score vs. Top 3")
-    plt.xticks(rotation=45, ha="right")
-    st.pyplot(plt.gcf())
-    plt.clf()
+    st.plotly_chart(fig, use_container_width=True)
 
-    # Booster Bedarf Diagramme mit logarithmischer Skala
-    for i, row in top_scores.iterrows():
+    # Booster Bedarf Diagramme interaktiv
+    for idx, row in top_scores.iterrows():
         target = row["Score"]
         diff = max(0, target - me["score"])
         st.markdown(f"### {row['Clan']} Ziel: {target:.2f} Punkte (Diff: {diff:.2f})")
@@ -110,7 +109,6 @@ if data and "data" in data:
             st.success("✅ Du bist bereits auf oder vor diesem Platz!")
             continue
 
-        # Booster-Berechnung
         echo_cycles = calc_echo_cycles(diff)
         blitz_count = math.ceil(diff / 400000)
         rakete_sec = math.ceil(diff / 1800)
@@ -118,19 +116,20 @@ if data and "data" in data:
         booster_names = ["🔄 Echo Zyklen", "🚀 Blitz Booster", "⚡ Rakete Sekunden"]
         booster_values = [echo_cycles or 0, blitz_count, rakete_sec]
 
-        fig2, ax2 = plt.subplots(figsize=(6, 4))
-        bars = ax2.bar(booster_names, booster_values, color=["blue", "green", "purple"])
-        ax2.set_ylabel("Benötigte Menge (log-Skala)")
-        ax2.set_yscale('log')
-        ax2.set_title(f"Booster-Bedarf für {row['Clan']}")
-
-        # Zahlen auf Balken
-        for bar in bars:
-            height = bar.get_height()
-            ax2.text(bar.get_x() + bar.get_width() / 2, height, f'{int(height)}', ha='center', va='bottom')
-
-        st.pyplot(fig2)
-        plt.clf()
+        fig_boost = go.Figure()
+        fig_boost.add_trace(go.Bar(
+            x=booster_names,
+            y=booster_values,
+            text=booster_values,
+            textposition='auto',
+            marker_color=["blue", "green", "purple"]
+        ))
+        fig_boost.update_layout(
+            title=f"Booster-Bedarf für {row['Clan']}",
+            yaxis_title="Benötigte Menge",
+            yaxis_type="log"
+        )
+        st.plotly_chart(fig_boost, use_container_width=True)
 
 else:
     st.warning("Keine gültigen Daten empfangen. Bitte prüfe Access Token oder API.")
