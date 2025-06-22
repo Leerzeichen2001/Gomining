@@ -65,7 +65,6 @@ def calc_echo_cycles(diff):
 
 st.title("⛏️ BTC Mining Wars Booster-Rechner (mit Graphen)")
 
-# Checkbox für Auto-Refresh
 auto_refresh = st.checkbox("🔄 Automatisch alle 1 Sekunde aktualisieren", value=True)
 
 check_token(st.secrets["ACCESS_TOKEN"])
@@ -77,21 +76,21 @@ if data and "data" in data:
     df = pd.DataFrame([{"Clan": c["clanName"], "Score": c["score"]} for c in clans])
     df_sorted = df.sort_values(by="Score", ascending=False)
     top_scores = df_sorted.head(3)
-    
-    # Diagramm: Dein Score vs Top 3
+
+    # Dein Score vs. Top 3 Diagramm
     plt.figure(figsize=(8, 5))
-    bars = plt.bar(
+    plt.bar(
         [f"{row['Clan']} (Top {i+1})" for i, row in top_scores.iterrows()] + ["Du"],
         list(top_scores["Score"]) + [me["score"]],
         color=["green", "orange", "blue", "red"]
     )
     plt.ylabel("Punkte")
-    plt.title("Dein Score vs. Top 3 Clans")
+    plt.title("Dein Score vs. Top 3")
     plt.xticks(rotation=45, ha="right")
     st.pyplot(plt.gcf())
     plt.clf()
 
-    # Booster-Bedarf als Diagramm pro Ziel
+    # Booster Bedarf Diagramme
     for idx, row in top_scores.iterrows():
         target = row["Score"]
         diff = max(0, target - me["score"])
@@ -108,17 +107,17 @@ if data and "data" in data:
         booster_names = ["🔄 Echo Zyklen", "🚀 Blitz (x)", "⚡ Rakete (Sekunden)"]
         booster_values = [echo_cycles or 0, blitz_count, rakete_sec]
 
-        fig2, ax2 = plt.subplots(figsize=(6,4))
+        fig2, ax2 = plt.subplots(figsize=(6, 4))
         ax2.bar(booster_names, booster_values, color=["blue", "green", "purple"])
         ax2.set_ylabel("Benötigte Menge")
-        ax2.set_title("Booster-Bedarf für Ziel")
+        ax2.set_title("Booster-Bedarf")
         st.pyplot(fig2)
         plt.clf()
 
 else:
     st.warning("Keine gültigen Daten empfangen. Bitte prüfe Access Token oder API.")
 
-# Auto-Refresh
+# Auto-Refresh ganz am Ende, außerhalb der Schleifen und Plots
 if auto_refresh:
     time.sleep(1)
     st.experimental_rerun()
