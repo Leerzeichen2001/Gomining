@@ -5,10 +5,6 @@ import base64
 import json
 import time
 import math
-from streamlit_autorefresh import st_autorefresh
-
-# Automatische Aktualisierung alle 1 Sekunde (1000 ms)
-st_autorefresh(interval=1000, limit=None, key="auto-refresh")
 
 API_URL = "https://api.gomining.com/api/nft-game/round/get-state"
 
@@ -74,6 +70,9 @@ BOOSTERS = [
 
 st.title("⛏️ BTC Mining Wars Booster-Rechner")
 
+# Checkbox für Auto-Refresh
+auto_refresh = st.checkbox("🔄 Automatisch alle 1 Sekunde aktualisieren", value=True)
+
 check_token(st.secrets["ACCESS_TOKEN"])
 data = fetch_round_state()
 
@@ -121,3 +120,8 @@ if data and "data" in data:
             st.write(f"Laufzeit: {min_needed} min {sec_remaining} sek")
 else:
     st.warning("Keine gültigen Daten empfangen. Bitte prüfe Access Token oder API.")
+
+# Auto-Refresh bei aktivierter Checkbox
+if auto_refresh:
+    time.sleep(1)
+    st.experimental_rerun()
