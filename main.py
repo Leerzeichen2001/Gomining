@@ -6,6 +6,7 @@ import json
 import time
 import math
 import plotly.graph_objects as go
+from datetime import datetime
 
 API_URL = "https://api.gomining.com/api/nft-game/round/get-state"
 
@@ -63,7 +64,7 @@ def calc_echo_cycles(diff):
     n = (-b + math.sqrt(discriminant)) / (2 * a)
     return math.ceil(n)
 
-# --- Start Auto-Refresh ---
+# --- Auto-Refresh ---
 if "last_refresh" not in st.session_state:
     st.session_state["last_refresh"] = time.time()
 
@@ -74,8 +75,8 @@ if auto_refresh:
         st.session_state["last_refresh"] = time.time()
         st.experimental_rerun()
 
-# --- Haupt-App ---
-st.title("⛏️ BTC Mining Wars Booster-Rechner (Plotly interaktiv)")
+# --- App-Header ---
+st.title("⛏️ BTC Mining Wars Booster-Rechner + Rundenlängen-Phase (Plotly)")
 
 check_token(st.secrets["ACCESS_TOKEN"])
 data = fetch_round_state()
@@ -87,7 +88,7 @@ if data and "data" in data:
     df_sorted = df.sort_values(by="Score", ascending=False)
     top_scores = df_sorted.head(3)
 
-    # Dein Score vs. Top 3 interaktiv
+    # Score Diagramm
     fig = go.Figure()
     for idx, row in top_scores.iterrows():
         fig.add_trace(go.Bar(name=f"{row['Clan']} (Top {idx+1})", x=["Score"], y=[row["Score"]]))
@@ -99,7 +100,7 @@ if data and "data" in data:
     )
     st.plotly_chart(fig, use_container_width=True)
 
-    # Booster Bedarf Diagramme interaktiv
+    # Booster Bedarf Diagramme
     for idx, row in top_scores.iterrows():
         target = row["Score"]
         diff = max(0, target - me["score"])
@@ -130,6 +131,46 @@ if data and "data" in data:
             yaxis_type="log"
         )
         st.plotly_chart(fig_boost, use_container_width=True)
+
+    # Rundenlängen-Analyse
+    if "runden" not in st.session_state:
+        st.session_state["runden"] = []
+
+    # Beispiel: Simuliere neue Runde (hier später echte Dauer einfügen!)
+    if len(st.session_state["runden"]) == 0 or datetime.now().second % 30 == 0:
+        # Simuliere zufällige Dauer zwischen 8 und 14 min
+        duration = round(8 + (6 * (time.time() % 1)), 2)
+        st.session_state["runden"].append(duration)
+        if len(st.session_state["runden"]) > 20:
+            st.session_state["runden"].pop(0)
+
+    if len(st.session_state["runden"]) > 0:
+        avg = sum(st.session_state["runden"]) / len(st.session_state["runden"])
+        if avg < 9:
+            phase = "Kurz-Phase"
+        elif avg > 12:
+            phase = "Lang-Phase"
+        else:
+            phase = "Standard-Phase"
+
+        st.info(f"Aktuelle Phase: {phase} (Ø Rundenlänge: {avg:.2f} min)")
+
+        # Plot Verlauf
+        fig_rounds = go.Figure()
+        fig_rounds.add_trace(go.Scatter(
+            x=list(range(1, len(st.session_state["runden"]) + 1)),
+            y=st.session_state["runden"],
+            mode='lines+markers',
+            name="Rundenlänge"
+        ))
+        fig_rounds.update_layout(
+            title="Rundenlängen Verlauf (letzte 20 Runden)",
+            xaxis_title="Runde (von alt nach neu)",
+            yaxis_title="Dauer (Minuten)"
+        )
+        st.plotly_chart(fig_rounds, use_container_width=True)
+
+        st.write(f"Schätzung nächste Rundenlänge: ~{avg:.2f} min basierend auf aktueller Phase")
 
 else:
     st.warning("Keine gültigen Daten empfangen. Bitte prüfe Access Token oder API.")
