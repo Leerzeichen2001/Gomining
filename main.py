@@ -6,8 +6,10 @@ import json
 import time
 import math
 
+# API URL
 API_URL = "https://api.gomining.com/api/nft-game/round/get-state"
 
+# JWT-Token Ablaufprüfung
 def decode_jwt_exp(token):
     try:
         payload_encoded = token.split('.')[1]
@@ -29,6 +31,7 @@ def check_token(token):
         sec_left = remaining % 60
         st.info(f"✅ Access Token gültig: {min_left} min {sec_left} sek")
 
+# API-Daten abrufen
 def fetch_round_state():
     headers = {
         "Authorization": f"Bearer {st.secrets['ACCESS_TOKEN']}",
@@ -49,20 +52,31 @@ def fetch_round_state():
         return response.json()
     else:
         st.error(f"API Fehler: {response.status_code}")
+        st.json(response.text)
         return None
 
+# Echo Boost Zyklen berechnen
+def calc_echo_cycles(diff):
+    # Summe = 100k * N * (N+1)/2 >= diff
+    # Lösen der quadratischen Gleichung: N^2 + N - (2*diff/100000) >= 0
+    a = 1
+    b = 1
+    c = -2 * diff / 100000
+    discriminant = b ** 2 - 4 * a * c
+    if discriminant < 0:
+        return None
+    n = (-b + math.sqrt(discriminant)) / (2 * a)
+    return math.ceil(n)
+
+# Booster Definition
 BOOSTERS = [
-    {"name": "⚡ Boost X1", "value": 1800, "type": "instant"},
-    {"name": "⚡ Boost X10", "value": 18000, "type": "instant"},
-    {"name": "⚡ Boost X100", "value": 180000, "type": "instant"},
-    {"name": "🚀 Instant Boost", "value": 400000, "type": "instant"},
-    {"name": "🔄 Echo Boost X1", "value": 100000, "type": "echo", "interval": 120},
-    {"name": "🔄 Echo Boost X10", "value": 1000000, "type": "echo", "interval": 120},
-    {"name": "🔄 Echo Boost X100", "value": 10000000, "type": "echo", "interval": 120},
+    {"name": "🔄 Echo Boost X1", "type": "echo", "interval": 120},  # alle 2 min
+    {"name": "🚀 Blitz", "value": 400000, "type": "instant"},      # sofort 400k
+    {"name": "⚡ Rakete", "value": 1800, "type": "rakete"}         # 1800 Punkte pro Sekunde
 ]
 
-# App Start
-st.title("⛏️ BTC Mining Wars Wahrscheinlichkeiten & Booster")
+# Streamlit App Start
+st.title("⛏️ BTC Mining Wars Booster-Rechner")
 
 check_token(st.secrets["ACCESS_TOKEN"])
 data = fetch_round_state()
@@ -85,19 +99,32 @@ if data and "data" in data:
         st.markdown(f"Benötigte Punkte: **{diff:.2f}**")
 
         cols = st.columns(3)
-        for i, booster in enumerate(BOOSTERS):
-            col = cols[i % 3]
-            with col:
-                st.markdown(f"**{booster['name']}**")
-                count = math.ceil(diff / booster["value"])
-                if booster["type"] == "instant":
-                    st.write(f"Benötigt: {count}x")
-                else:
-                    time_needed = count * booster["interval"]
-                    min_needed = time_needed // 60
-                    sec_needed = time_needed % 60
-                    st.write(f"Benötigt: {count}x")
-                    st.write(f"Dauer: {min_needed} min {sec_needed} sek")
 
+        # Echo Boost
+        with cols[0]:
+            st.markdown("**🔄 Echo Boost X1**")
+            n_cycles = calc_echo_cycles(diff)
+            if n_cycles:
+                total_time = n_cycles * 120
+                min_needed = total_time // 60
+                sec_needed = total_time % 60
+                st.write(f"Zyklen: {n_cycles}")
+                st.write(f"Dauer: {min_needed} min {sec_needed} sek")
+            else:
+                st.write("Nicht erreichbar")
+
+        # Blitz
+        with cols[1]:
+            st.markdown("**🚀 Blitz**")
+            blitz_count = math.ceil(diff / 400000)
+            st.write(f"Benötigt: {blitz_count}x")
+
+        # Rakete
+        with cols[2]:
+            st.markdown("**⚡ Rakete**")
+            sec_needed = math.ceil(diff / 1800)
+            min_needed = sec_needed // 60
+            sec_remaining = sec_needed % 60
+            st.write(f"Laufzeit: {min_needed} min {sec_remaining} sek")
 else:
     st.warning("Keine gültigen Daten empfangen. Bitte prüfe Access Token oder API.")
