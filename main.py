@@ -79,15 +79,17 @@ def display_round_emojis(runden):
 
 def improved_estimate(runden):
     if len(runden) < 3:
-        return np.mean(runden), "Zu wenige Daten"
+        avg = np.mean(runden)
+        st.warning(f"⚠️ Nur {len(runden)} Runden im Verlauf — Schätzung ungenau!")
+        return avg, ""
 
     # Entferne Ausreißer (längste & kürzeste)
     trimmed = sorted(runden)[1:-1] if len(runden) > 4 else runden
-    # Gewichteter Durchschnitt: letzte Runden zählen mehr
+    # Gewichteter Durchschnitt
     weights = np.linspace(1, 2, len(trimmed))
     avg_weighted = np.average(trimmed, weights=weights)
 
-    # Trend erkennen
+    # Trend-Erkennung
     x = np.arange(len(runden))
     y = np.array(runden)
     slope, _ = np.polyfit(x, y, 1)
@@ -100,7 +102,7 @@ def improved_estimate(runden):
         avg_weighted -= 1
         trend_note = " (fallender Trend erkannt)"
 
-    avg_weighted = max(1, avg_weighted)  # keine unrealistisch niedrigen Werte
+    avg_weighted = max(1, avg_weighted)
     return avg_weighted, trend_note
 
 # --- Auto-Refresh ---
@@ -115,7 +117,7 @@ if auto_refresh:
         st.experimental_rerun()
 
 # --- App ---
-st.title("⛏️ BTC Mining Wars Booster-Rechner + Präzisere Rundenlängen-Schätzung")
+st.title("⛏️ BTC Mining Wars Booster-Rechner + Verbesserte Rundenlängen-Schätzung")
 
 check_token(st.secrets["ACCESS_TOKEN"])
 data = fetch_round_state()
@@ -127,7 +129,7 @@ if data and "data" in data:
     df_sorted = df.sort_values(by="Score", ascending=False)
     top_scores = df_sorted.head(3)
 
-    # Score Diagramm
+    # Score Vergleich
     fig = go.Figure()
     for idx, row in top_scores.iterrows():
         fig.add_trace(go.Bar(name=f"{row['Clan']} (Top {idx+1})", x=["Score"], y=[row["Score"]]))
@@ -171,7 +173,7 @@ if data and "data" in data:
         )
         st.plotly_chart(fig_boost, use_container_width=True)
 
-    # Rundenlängen-Verlauf
+    # Rundenlängen Verlauf
     if "runden" not in st.session_state:
         st.session_state["runden"] = []
 
@@ -182,7 +184,7 @@ if data and "data" in data:
             st.session_state["runden"].pop(0)
 
     if len(st.session_state["runden"]) > 0:
-        avg_estimate, note = improved_estimate(st.session_state["runden"])
+        avg_estimate, trend_note = improved_estimate(st.session_state["runden"])
         if avg_estimate < 9:
             phase = "Kurz-Phase"
         elif avg_estimate > 12:
@@ -190,9 +192,8 @@ if data and "data" in data:
         else:
             phase = "Standard-Phase"
 
-        st.info(f"Aktuelle Phase: {phase} (Ø Schätzung: {avg_estimate:.2f} min{note})")
+        st.info(f"Aktuelle Phase: {phase}\nØ Schätzung nächste Runde: {avg_estimate:.2f} min {trend_note}")
         display_round_emojis(st.session_state["runden"])
-        st.write(f"Präzisere Schätzung nächste Rundenlänge: ~{avg_estimate:.2f} min")
 
 else:
     st.warning("Keine gültigen Daten empfangen. Bitte prüfe Access Token oder API.")
