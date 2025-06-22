@@ -6,6 +6,7 @@ import json
 import time
 import math
 import plotly.graph_objects as go
+import numpy as np
 from datetime import datetime
 
 API_URL = "https://api.gomining.com/api/nft-game/round/get-state"
@@ -76,6 +77,32 @@ def display_round_emojis(runden):
         lines.append(f"{emoji} {dur:.2f} min")
     st.markdown("**Rundenlänge Verlauf:**  \n" + "  \n".join(lines))
 
+def improved_estimate(runden):
+    if len(runden) < 3:
+        return np.mean(runden), "Zu wenige Daten"
+
+    # Entferne Ausreißer (längste & kürzeste)
+    trimmed = sorted(runden)[1:-1] if len(runden) > 4 else runden
+    # Gewichteter Durchschnitt: letzte Runden zählen mehr
+    weights = np.linspace(1, 2, len(trimmed))
+    avg_weighted = np.average(trimmed, weights=weights)
+
+    # Trend erkennen
+    x = np.arange(len(runden))
+    y = np.array(runden)
+    slope, _ = np.polyfit(x, y, 1)
+
+    trend_note = ""
+    if slope > 0.05:
+        avg_weighted += 1
+        trend_note = " (steigender Trend erkannt)"
+    elif slope < -0.05:
+        avg_weighted -= 1
+        trend_note = " (fallender Trend erkannt)"
+
+    avg_weighted = max(1, avg_weighted)  # keine unrealistisch niedrigen Werte
+    return avg_weighted, trend_note
+
 # --- Auto-Refresh ---
 if "last_refresh" not in st.session_state:
     st.session_state["last_refresh"] = time.time()
@@ -88,7 +115,7 @@ if auto_refresh:
         st.experimental_rerun()
 
 # --- App ---
-st.title("⛏️ BTC Mining Wars Booster-Rechner + Emoji-Rundenanalyse")
+st.title("⛏️ BTC Mining Wars Booster-Rechner + Präzisere Rundenlängen-Schätzung")
 
 check_token(st.secrets["ACCESS_TOKEN"])
 data = fetch_round_state()
@@ -144,11 +171,10 @@ if data and "data" in data:
         )
         st.plotly_chart(fig_boost, use_container_width=True)
 
-    # Rundenlängen-Verlauf (Emoji)
+    # Rundenlängen-Verlauf
     if "runden" not in st.session_state:
         st.session_state["runden"] = []
 
-    # Simuliere neue Runde (hier später echte Daten einfügen)
     if len(st.session_state["runden"]) == 0 or datetime.now().second % 30 == 0:
         duration = round(8 + (6 * (time.time() % 1)), 2)
         st.session_state["runden"].append(duration)
@@ -156,17 +182,17 @@ if data and "data" in data:
             st.session_state["runden"].pop(0)
 
     if len(st.session_state["runden"]) > 0:
-        avg = sum(st.session_state["runden"]) / len(st.session_state["runden"])
-        if avg < 9:
+        avg_estimate, note = improved_estimate(st.session_state["runden"])
+        if avg_estimate < 9:
             phase = "Kurz-Phase"
-        elif avg > 12:
+        elif avg_estimate > 12:
             phase = "Lang-Phase"
         else:
             phase = "Standard-Phase"
 
-        st.info(f"Aktuelle Phase: {phase} (Ø Rundenlänge: {avg:.2f} min)")
+        st.info(f"Aktuelle Phase: {phase} (Ø Schätzung: {avg_estimate:.2f} min{note})")
         display_round_emojis(st.session_state["runden"])
-        st.write(f"Schätzung nächste Rundenlänge: ~{avg:.2f} min basierend auf aktueller Phase")
+        st.write(f"Präzisere Schätzung nächste Rundenlänge: ~{avg_estimate:.2f} min")
 
 else:
     st.warning("Keine gültigen Daten empfangen. Bitte prüfe Access Token oder API.")
