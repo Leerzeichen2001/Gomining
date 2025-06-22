@@ -13,7 +13,13 @@ def fetch_round_state():
         "x-device-type": "desktop",
         "Accept": "application/json"
     }
-    response = requests.post(API_URL, headers=headers, json={})
+    
+    # Versuch mit POST ohne Body
+    response = requests.post(API_URL, headers=headers)
+    
+    # Falls das nicht funktioniert, kannst du später auf GET wechseln:
+    # response = requests.get(API_URL, headers=headers)
+    
     if response.status_code == 200:
         return response.json()
     else:
@@ -28,6 +34,7 @@ if data and "data" in data:
     clans = data["data"]["array"]
     me = data["data"]["me"]
 
+    # DataFrame erstellen
     df = pd.DataFrame([{
         "Clan": c["clanName"],
         "Score": c["score"],
@@ -35,26 +42,26 @@ if data and "data" in data:
         "Boost": c["activeBoostScore"]
     } for c in clans])
 
-    # Dein Clan separat anzeigen
+    # Dein Clan anzeigen
     st.subheader("Dein Clan")
     st.write(f"**Name:** {me['clanName']}")
     st.write(f"**Score:** {me['score']:.2f}")
     st.write(f"**Gewinnchance:** {me['chance']*100:.4f} %")
 
-    # Bar-Chart Score
+    # Score Bar-Chart
     st.subheader("Score pro Clan")
     df_sorted = df.sort_values(by="Score", ascending=False)
     st.bar_chart(df_sorted.set_index("Clan")["Score"])
 
-    # Bar-Chart Boosts
+    # Boost Bar-Chart
     st.subheader("Boost pro Clan")
     st.bar_chart(df_sorted.set_index("Clan")["Boost"])
 
-    # Bar-Chart Chance
+    # Gewinnchance Bar-Chart
     st.subheader("Gewinnchance pro Clan (%)")
     st.bar_chart(df_sorted.set_index("Clan")["Chance %"])
 
-    # Rechner: Wie viel Score für gewünschte Chance?
+    # Rechner: benötigter Score für Wunsch-Chance
     st.subheader("Optimaler Score-Rechner")
     desired_chance = st.slider("Gewünschte Gewinnchance (%)", min_value=0.1, max_value=50.0, value=5.0)
     total_score = df["Score"].sum() + me["score"]
