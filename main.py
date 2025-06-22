@@ -15,7 +15,7 @@ def fetch_round_state():
     }
     
     # Versuch mit POST ohne Body
-    response = requests.post(API_URL, headers=headers)
+    response = requests.get(API_URL, headers=headers)
     
     # Falls das nicht funktioniert, kannst du später auf GET wechseln:
     # response = requests.get(API_URL, headers=headers)
