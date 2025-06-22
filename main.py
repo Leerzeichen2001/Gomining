@@ -29,7 +29,6 @@ def display_dashboard(round_data):
 
     st.title("GoMining Runden Dashboard")
 
-    # Grundlegende Infos
     st.subheader("Allgemeine Informationen")
     st.write(f"Runden-ID: {round_data.get('id')}")
     st.write(f"Block Number: {round_data.get('blockNumber')}")
@@ -37,7 +36,6 @@ def display_dashboard(round_data):
     st.write(f"Gestartet: {round_data.get('startedAt')}")
     st.write(f"Beendet: {round_data.get('endedAt')}")
 
-    # UserRounds als Tabelle
     user_rounds = round_data.get("userRounds", [])
     if user_rounds:
         df = pd.DataFrame(user_rounds)
@@ -48,12 +46,18 @@ def display_dashboard(round_data):
 
 def main():
     st.set_page_config(page_title="GoMining Dashboard", layout="wide")
+
     st.sidebar.title("GoMining Dashboard")
-    if st.sidebar.button("Daten aktualisieren"):
+    sidebar_click = st.sidebar.button("Daten aktualisieren")
+
+    st.title("GoMining Runden Übersicht")
+    main_click = st.button("Daten aktualisieren")
+
+    if sidebar_click or main_click:
         round_data = fetch_current_round()
         display_dashboard(round_data)
     else:
-        st.info("Klicke links auf 'Daten aktualisieren', um die neuesten Runden-Daten abzurufen.")
+        st.info("Klicke auf den Button 'Daten aktualisieren', um die neuesten Runden-Daten zu laden.")
 
 if __name__ == "__main__":
     main()
