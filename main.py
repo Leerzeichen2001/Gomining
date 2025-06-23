@@ -3,6 +3,7 @@ import requests
 import time
 import datetime
 import matplotlib.pyplot as plt
+import numpy as np
 
 # =======================
 # API Funktionen
@@ -72,8 +73,8 @@ def calculate_estimate(blocks):
 # =======================
 def main():
     st.title("⛏ Bitcoin Blockzeit Vorhersage")
-    st.write("Schätzung der Blockzeit auf Basis der letzten BTC-Blöcke.")
-    
+    st.write("Schätzung der Blockzeit und Heatmap der Intervalle.")
+
     block_count = st.slider("Anzahl der letzten Blöcke für Analyse:", min_value=5, max_value=100, value=20, step=5)
     
     if st.button("🔄 Daten aktualisieren"):
@@ -89,11 +90,8 @@ def main():
             st.write(f"🕒 **Seit letztem Block:** {seconds_to_hms(seconds_since_last)}")
             st.write(f"⏳ **Geschätzte Restzeit bis nächster Block:** {seconds_to_hms(estimate_remaining)}")
             st.write(f"🔍 **Vermutete Gesamtdauer dieses Blocks:** {seconds_to_hms(avg_interval)}")
-            
-            if estimate_remaining == 0:
-                st.warning("⚡ Der nächste Block wird jeden Moment erwartet!")
-            
-            # Chart
+
+            # Bar Chart
             fig, ax = plt.subplots(figsize=(10, 5))
             ax.bar(heights[1:], intervals, color="skyblue")
             ax.set_xlabel("Blockhöhe")
@@ -101,10 +99,21 @@ def main():
             ax.set_title(f"Block-Intervalle (letzte {block_count} Blöcke)")
             ax.invert_xaxis()
             st.pyplot(fig)
-            
+
+            # Heatmap
+            st.subheader("🟧 Heatmap der Blockzeiten (je röter, desto länger)")
+            interval_array = np.array(intervals).reshape(1, -1)
+            fig2, ax2 = plt.subplots(figsize=(10, 1.5))
+            im = ax2.imshow(interval_array, cmap="YlOrRd", aspect="auto")
+            ax2.set_yticks([])
+            ax2.set_xticks(range(len(heights)-1))
+            ax2.set_xticklabels(heights[1:], rotation=90, fontsize=6)
+            fig2.colorbar(im, orientation="horizontal", pad=0.2, label="Intervall (Sekunden)")
+            st.pyplot(fig2)
+
             # Letzte Blöcke
             st.subheader("Letzte Blöcke (Zeit UTC, Hash gekürzt)")
-            for b in blocks[:5]:  # Nur die letzten 5 anzeigen, der Rest im Chart
+            for b in blocks[:5]:  # Zeige die letzten 5
                 block_time = datetime.datetime.utcfromtimestamp(b['time']).strftime('%Y-%m-%d %H:%M:%S')
                 st.write(f"Block {b['height']} | Zeit: {block_time} | Hash: {b['hash'][:16]}...")
 
