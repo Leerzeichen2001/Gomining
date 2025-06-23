@@ -72,41 +72,41 @@ def calculate_estimate(blocks):
 # =======================
 def main():
     st.title("⛏ Bitcoin Blockzeit Vorhersage")
-    st.write("Schätzung der Blockzeit und des nächsten Blocks auf Basis der letzten BTC-Blöcke.")
+    st.write("Schätzung der Blockzeit auf Basis der letzten BTC-Blöcke.")
+    
+    block_count = st.slider("Anzahl der letzten Blöcke für Analyse:", min_value=5, max_value=100, value=20, step=5)
     
     if st.button("🔄 Daten aktualisieren"):
         try:
-            with st.spinner("Hole aktuelle Block-Daten..."):
-                blocks = fetch_recent_blocks(n=10)
+            with st.spinner(f"Lade die letzten {block_count} Blöcke..."):
+                blocks = fetch_recent_blocks(n=block_count)
                 intervals, avg_interval, estimate_remaining, seconds_since_last, heights = calculate_estimate(blocks)
             
-            st.success("Daten erfolgreich geladen!")
+            st.success(f"{block_count} Blöcke erfolgreich geladen und analysiert!")
             
-            # Ergebnisse anzeigen
-            st.write(f"📊 **Durchschnittliches Block-Intervall:** {seconds_to_hms(avg_interval)}")
+            # Ergebnisse
+            st.write(f"📊 **Durchschnittliches Block-Intervall (über {len(intervals)} Intervalle):** {seconds_to_hms(avg_interval)}")
             st.write(f"🕒 **Seit letztem Block:** {seconds_to_hms(seconds_since_last)}")
             st.write(f"⏳ **Geschätzte Restzeit bis nächster Block:** {seconds_to_hms(estimate_remaining)}")
-            
-            # Einschätzung Gesamtzeit des aktuellen Blocks
             st.write(f"🔍 **Vermutete Gesamtdauer dieses Blocks:** {seconds_to_hms(avg_interval)}")
             
             if estimate_remaining == 0:
                 st.warning("⚡ Der nächste Block wird jeden Moment erwartet!")
             
             # Chart
-            fig, ax = plt.subplots()
+            fig, ax = plt.subplots(figsize=(10, 5))
             ax.bar(heights[1:], intervals, color="skyblue")
             ax.set_xlabel("Blockhöhe")
             ax.set_ylabel("Intervall (Sekunden)")
-            ax.set_title("Block-Intervalle (letzte 10 Blöcke)")
+            ax.set_title(f"Block-Intervalle (letzte {block_count} Blöcke)")
             ax.invert_xaxis()
             st.pyplot(fig)
             
             # Letzte Blöcke
-            st.subheader("Letzte Blöcke")
-            for b in blocks:
+            st.subheader("Letzte Blöcke (Zeit UTC, Hash gekürzt)")
+            for b in blocks[:5]:  # Nur die letzten 5 anzeigen, der Rest im Chart
                 block_time = datetime.datetime.utcfromtimestamp(b['time']).strftime('%Y-%m-%d %H:%M:%S')
-                st.write(f"Block {b['height']} | Zeit: {block_time} UTC | Hash: {b['hash'][:16]}...")
+                st.write(f"Block {b['height']} | Zeit: {block_time} | Hash: {b['hash'][:16]}...")
 
         except Exception as e:
             st.error(f"❌ Fehler beim Laden der Daten: {e}")
