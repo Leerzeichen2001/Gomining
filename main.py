@@ -40,8 +40,20 @@ def fetch_recent_blocks(n=10):
     return blocks
 
 # =======================
-# Schätzung berechnen
+# Hilfsfunktionen
 # =======================
+def seconds_to_hms(seconds):
+    seconds = int(seconds)
+    h = seconds // 3600
+    m = (seconds % 3600) // 60
+    s = seconds % 60
+    if h > 0:
+        return f"{h}h {m}m {s}s"
+    elif m > 0:
+        return f"{m}m {s}s"
+    else:
+        return f"{s}s"
+
 def calculate_estimate(blocks):
     blocks_sorted = sorted(blocks, key=lambda x: x['height'], reverse=True)
     times = [b['time'] for b in blocks_sorted]
@@ -51,49 +63,51 @@ def calculate_estimate(blocks):
     avg_interval = sum(intervals) / len(intervals)
     
     seconds_since_last = int(time.time()) - times[0]
-    estimate_in = avg_interval - seconds_since_last
+    estimate_remaining = max(avg_interval - seconds_since_last, 0)
     
-    return intervals, avg_interval, estimate_in, heights
+    return intervals, avg_interval, estimate_remaining, seconds_since_last, heights
 
 # =======================
 # Streamlit App
 # =======================
 def main():
     st.title("⛏ Bitcoin Blockzeit Vorhersage")
-    st.write("Diese App schätzt die Zeit bis zum nächsten BTC-Block basierend auf den letzten Blöcken.")
+    st.write("Schätzung der Blockzeit und des nächsten Blocks auf Basis der letzten BTC-Blöcke.")
     
     if st.button("🔄 Daten aktualisieren"):
         try:
             with st.spinner("Hole aktuelle Block-Daten..."):
                 blocks = fetch_recent_blocks(n=10)
-                intervals, avg_interval, estimate_in, heights = calculate_estimate(blocks)
+                intervals, avg_interval, estimate_remaining, seconds_since_last, heights = calculate_estimate(blocks)
             
             st.success("Daten erfolgreich geladen!")
             
             # Ergebnisse anzeigen
-            st.write(f"📊 Durchschnittliches Block-Intervall (letzte 10 Blöcke): **{avg_interval:.1f} Sekunden**")
-            st.write(f"🕒 Seit letztem Block: **{int(time.time()) - blocks[0]['time']} Sekunden**")
+            st.write(f"📊 **Durchschnittliches Block-Intervall:** {seconds_to_hms(avg_interval)}")
+            st.write(f"🕒 **Seit letztem Block:** {seconds_to_hms(seconds_since_last)}")
+            st.write(f"⏳ **Geschätzte Restzeit bis nächster Block:** {seconds_to_hms(estimate_remaining)}")
             
-            if estimate_in > 0:
-                st.write(f"⏳ Geschätzte Zeit bis nächster Block: **{estimate_in:.1f} Sekunden (~{estimate_in/60:.1f} Minuten)**")
-            else:
-                st.write("⚡ Block wird jederzeit erwartet oder schon gefunden!")
+            # Einschätzung Gesamtzeit des aktuellen Blocks
+            st.write(f"🔍 **Vermutete Gesamtdauer dieses Blocks:** {seconds_to_hms(avg_interval)}")
+            
+            if estimate_remaining == 0:
+                st.warning("⚡ Der nächste Block wird jeden Moment erwartet!")
             
             # Chart
             fig, ax = plt.subplots()
-            ax.bar(heights[1:], intervals)
+            ax.bar(heights[1:], intervals, color="skyblue")
             ax.set_xlabel("Blockhöhe")
             ax.set_ylabel("Intervall (Sekunden)")
             ax.set_title("Block-Intervalle (letzte 10 Blöcke)")
             ax.invert_xaxis()
             st.pyplot(fig)
             
-            # Letzte Blöcke anzeigen
+            # Letzte Blöcke
             st.subheader("Letzte Blöcke")
             for b in blocks:
                 block_time = datetime.datetime.utcfromtimestamp(b['time']).strftime('%Y-%m-%d %H:%M:%S')
                 st.write(f"Block {b['height']} | Zeit: {block_time} UTC | Hash: {b['hash'][:16]}...")
-        
+
         except Exception as e:
             st.error(f"❌ Fehler beim Laden der Daten: {e}")
 
